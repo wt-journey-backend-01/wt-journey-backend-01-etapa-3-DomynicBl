@@ -5,6 +5,11 @@ const errorHandler = require('../utils/errorHandler');
 
 function validarDadosCaso(dados) {
     const errors = {};
+
+    if ('id' in dados) {
+        errors.id = "O campo 'id' não pode ser alterado.";
+    }
+
     if (!dados.titulo) errors.titulo = "O campo 'titulo' é obrigatório.";
     if (!dados.descricao) errors.descricao = "O campo 'descricao' é obrigatória.";
     if (!dados.status || !['aberto', 'solucionado'].includes(dados.status)) {

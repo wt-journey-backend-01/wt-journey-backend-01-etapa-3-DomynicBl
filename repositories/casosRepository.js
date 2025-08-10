@@ -6,6 +6,7 @@ const db = require('../db/db');
 const STATUS_VALIDOS = ['aberto', 'solucionado'];
 
 function findAll(filtros = {}) {
+    
     if (filtros.status && !STATUS_VALIDOS.includes(filtros.status.toLowerCase())) {
         const error = new Error(`O status '${filtros.status}' é inválido.`);
         error.name = 'ValidationError'; // Damos um nome ao erro para identificá-lo

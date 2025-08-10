@@ -9,6 +9,10 @@ function validarDadosAgente(dados) {
     const errors = {};
     const dateFormat = /^\d{4}-\d{2}-\d{2}$/;
 
+    if ('id' in dados) {
+        errors.id = "O campo 'id' não pode ser alterado.";
+    }
+
     if (!dados.nome) errors.nome = "O campo 'nome' é obrigatório.";
     if (!dados.dataDeIncorporacao) {
         errors.dataDeIncorporacao = "O campo 'dataDeIncorporacao' é obrigatório.";
