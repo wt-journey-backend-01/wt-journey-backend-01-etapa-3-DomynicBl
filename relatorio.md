@@ -1,208 +1,271 @@
 <sup>Esse é um feedback gerado por IA, ele pode conter erros.</sup>
 
-Você tem 9 créditos restantes para usar o sistema de feedback AI.
+Você tem 8 créditos restantes para usar o sistema de feedback AI.
 
 # Feedback para DomynicBl:
 
-Nota final: **68.4/100**
+Nota final: **77.2/100**
 
-# Feedback para DomynicBl 🚓🚀
+# Feedback para DomynicBl 🚔✨
 
-Olá, Domynic! Antes de tudo, parabéns pelo empenho até aqui! 🎉 Migrar uma API de dados em memória para um banco PostgreSQL com Knex.js não é tarefa simples, e você já avançou bastante, mantendo uma estrutura modular, com controllers, repositories e rotas bem organizadas. Isso é essencial para um código escalável e de fácil manutenção — você está no caminho certo! 👏
-
-Também quero destacar que você implementou filtros e buscas avançadas nos endpoints, como filtragem por status e agente nos casos, o que mostra seu cuidado em entregar funcionalidades robustas. Excelente! 🏅
+Olá, Domynic! Primeiro, parabéns pelo esforço e dedicação em migrar sua API para usar PostgreSQL com Knex.js! 🎉 Você estruturou muito bem seu projeto, mantendo a modularidade com controllers, repositories, rotas e a configuração do banco. Isso já é um grande passo para uma API robusta e escalável. Vamos juntos analisar seu código para destravar ainda mais seu potencial? 🚀
 
 ---
 
-## Vamos analisar juntos os pontos que precisam de atenção para destravar sua API e alcançar a excelência! 🕵️‍♂️
+## 🎯 O que você mandou muito bem
 
-### 1. Validação e Proteção contra Alteração Indevida do ID
+- **Arquitetura modular:** Seu projeto está bem organizado em pastas `controllers/`, `repositories/`, `routes/`, `db/` e `utils/`. Isso é fundamental para manter o código limpo e fácil de manter.
+- **Configuração do Knex:** O arquivo `knexfile.js` está configurado corretamente para diferentes ambientes, e o `db/db.js` importa essa configuração de forma adequada. Isso garante que a conexão com o banco está bem planejada.
+- **Migrations e Seeds:** Você criou a migration para as tabelas `agentes` e `casos` com as colunas e relações essenciais, e os seeds populam as tabelas com dados iniciais, inclusive fazendo buscas para relacionar agentes e casos. Excelente! 👏
+- **Validação e tratamento de erros:** Nos controllers, você implementou várias validações de campos obrigatórios, formatos de data e status, além de tratar erros com códigos HTTP apropriados (400, 404, 500). Isso mostra cuidado com a experiência do usuário da API.
+- **Filtros e paginação:** Nos repositories, você implementou filtros para listagens, ordenação, paginação e busca por keywords (mesmo que ainda precise de ajustes, a base está lá).
+- **Extras bônus:** Você implementou filtros por status e agente, o que é um diferencial muito positivo! Além disso, a organização do código e os retornos de status estão bem alinhados com boas práticas.
 
-Percebi que há penalidades relacionadas a permitir que o campo `id` seja alterado nos endpoints de atualização (PUT e PATCH) tanto para agentes quanto para casos. Isso é um problema fundamental, porque o `id` é a chave primária e deve ser imutável após a criação do registro.
+---
 
-**Por que isso importa?**  
-Se o usuário conseguir alterar o `id`, pode quebrar a integridade referencial do banco e causar inconsistências, como casos apontando para agentes que não existem mais, ou agentes "fantasmas".
+## 🕵️‍♂️ Pontos que precisam de atenção para destravar sua API
 
-**O que vi no seu código?**  
-Nos seus controllers, como no `agentesController.js`, a validação dos dados não impede explicitamente que o `id` seja modificado:
+### 1. Validação que permite alterar o campo `id` no PATCH de agentes
 
-```js
-async function updateAgente(req, res) {
-    // ...
-    const errors = validarDadosAgente(req.body);
-    // Aqui, validarDadosAgente não checa se req.body.id existe e bloqueia
-    // ...
-}
-```
+No seu `agentesController.js`, na função `patchAgente`, você não está bloqueando a alteração do campo `id`. Isso é um problema porque o `id` é a chave primária e não deve ser alterada. A consequência é que o teste detectou que o `id` pode ser modificado, o que não pode.
 
-E no `validarDadosAgente` você valida apenas `nome`, `dataDeIncorporacao` e `cargo`, mas não bloqueia o campo `id`.
-
-**Como corrigir?**  
-No seu validador, adicione uma checagem para garantir que o campo `id` não seja enviado no corpo da requisição. Se for enviado, retorne erro 400.
-
-Exemplo:
+Veja que no `validarDadosAgente` você já bloqueia o `id` para PUT, mas no PATCH não há essa validação explícita:
 
 ```js
-function validarDadosAgente(dados) {
-    const errors = {};
-    if ('id' in dados) {
-        errors.id = "O campo 'id' não pode ser alterado.";
+// agentesController.js - patchAgente
+async function patchAgente(req, res) {
+    // ...
+    const dadosParciais = req.body;
+
+    // Falta validação para impedir alteração de 'id'
+    // Você pode adicionar algo assim:
+    if ('id' in dadosParciais) {
+        return errorHandler.sendInvalidParameterError(res, {
+            id: "O campo 'id' não pode ser alterado."
+        });
     }
-    // ... resto das validações ...
-    return errors;
+    // ...
 }
 ```
 
-Faça o mesmo para os casos no `validarDadosCaso`.
+**Por que isso é importante?**  
+Permitir alteração do `id` pode causar inconsistências graves no banco, pois esse campo é usado para identificar unicamente o registro.
 
 ---
 
-### 2. Implementação dos Endpoints de Filtragem e Busca Avançada
+### 2. Permitir criar um caso com `agente_id` inválido/inexistente
 
-Você conseguiu implementar corretamente filtros básicos, como status e agente para casos, e também ordenação simples para agentes, parabéns! 🎯
-
-Porém, percebi que os filtros mais avançados, como:
-
-- Busca por keywords no título e descrição dos casos (`q` no query)
-- Filtragem de agentes por data de incorporação com ordenação ascendente e descendente
-- Endpoints para buscar o agente responsável por um caso e os casos de um agente
-
-não estão funcionando ou não foram implementados corretamente.
-
-**O que observei?**
-
-- No seu `casosRepository.js`, o filtro por `q` está presente, mas aparentemente o teste falhou para o endpoint que deveria retornar os casos filtrados por keywords. Isso pode indicar que o endpoint não está passando corretamente os parâmetros para o repositório ou que a rota/controller não está implementada para aceitar esse filtro.
-
-- No `agentesRepository.js`, o filtro por data de incorporação com ordenação está parcialmente implementado, mas só aceita ordenar por `dataDeIncorporacao` quando o parâmetro `sort` é exatamente esse campo. Pode ser que o parâmetro não esteja sendo passado corretamente na rota ou que o controller não esteja repassando os filtros da query para o repositório.
-
-- Os métodos para buscar o agente pelo caso (`getAgenteByCasoId`) e os casos de um agente (`getCasosDoAgente`) estão implementados nos controllers, mas os testes indicam que estes endpoints não funcionam como esperado. Isso pode estar relacionado a algum problema na rota, no controller ou no repositório.
-
-**Sugestão prática:**  
-- Verifique se as rotas para esses endpoints estão corretamente definidas e exportadas, por exemplo:
+Na função `createCaso` do `casosController.js`, você já faz uma verificação para garantir que o agente existe:
 
 ```js
-// Em routes/casosRoutes.js
-router.get('/casos/:id/agente', casosController.getAgenteByCasoId);
+if (!(await agentesRepository.findById(req.body.agente_id))) {
+    return errorHandler.sendNotFoundError(res, `Agente com id '${req.body.agente_id}' não encontrado.`);
+}
 ```
 
-- Confirme se o controller está chamando o repositório certo e lidando com erros apropriadamente.
+Porém, a penalidade indica que esse controle não está funcionando 100%. Isso pode estar acontecendo por dois motivos comuns:
 
-- Teste manualmente esses endpoints com ferramentas como Postman ou Insomnia para garantir que retornam os dados esperados.
+- **Tipo do `agente_id`:** Se o `agente_id` enviado no corpo da requisição for uma string e no banco for número, a busca pode falhar. Verifique se o tipo está coerente (converta para número se necessário).
+- **Validação antes da criação:** Se a validação ocorrer *após* a inserção ou se o repositório não estiver tratando corretamente a exceção, o erro pode passar despercebido.
+
+**Sugestão:**  
+Você pode reforçar essa validação antes de chamar o repositório, garantindo que o `agente_id` seja um número válido e que o agente exista:
+
+```js
+const agenteId = Number(req.body.agente_id);
+if (isNaN(agenteId)) {
+    return errorHandler.sendInvalidParameterError(res, { agente_id: "O campo 'agente_id' deve ser um número válido." });
+}
+if (!(await agentesRepository.findById(agenteId))) {
+    return errorHandler.sendNotFoundError(res, `Agente com id '${agenteId}' não encontrado.`);
+}
+```
 
 ---
 
-### 3. Mensagens de Erro Personalizadas para Parâmetros Inválidos
+### 3. Falha na filtragem por palavras-chave nos casos (`q` no query params)
 
-Percebi que você já tem um módulo `errorHandler.js` e está usando mensagens customizadas para erros 400 e 404, o que é ótimo! 👍
+No seu `casosRepository.js`, você tem um filtro para `q` que busca no título e descrição:
 
-No entanto, os testes indicam que as mensagens para argumentos inválidos de agentes e casos ainda não estão 100% personalizadas ou consistentes.
+```js
+if (filtros.q) {
+    query.where(function() {
+        this.where('titulo', 'ilike', `%${filtros.q}%`)
+            .orWhere('descricao', 'ilike', `%${filtros.q}%`);
+    });
+}
+```
 
-**O que pode estar faltando?**  
-- Garantir que todos os erros de validação retornem um objeto JSON com os campos e mensagens específicas.  
-- Por exemplo, ao receber um status inválido no filtro de casos, você já lança um erro com nome `ValidationError`, mas talvez o middleware ou controller não esteja formatando a resposta exatamente como esperado.
+Embora a lógica pareça correta, percebi que você está usando `.where` e `.orWhere` dentro de uma função anônima, o que é a forma certa para agrupar condições. Contudo, o filtro pode não funcionar se o valor de `q` estiver vazio ou mal formatado. Além disso, o teste bônus falhou, indicando que talvez o endpoint não esteja expondo esse filtro corretamente ou que a rota não esteja usando o filtro.
 
 **Dica:**  
-Padronize a estrutura do erro retornado, algo como:
-
-```json
-{
-  "errors": {
-    "status": "O campo 'status' é inválido. Deve ser 'aberto' ou 'solucionado'."
-  }
-}
-```
-
-Isso facilita o entendimento para quem consome a API e para a manutenção futura.
+Verifique se o endpoint `/casos` está passando corretamente os query params para o repositório e se o teste está enviando o parâmetro `q`. Também garanta que o filtro não seja aplicado se `q` for vazio.
 
 ---
 
-### 4. Estrutura de Diretórios e Organização do Projeto
+### 4. Falha na busca do agente responsável por um caso (endpoint `/casos/:id/agente`)
 
-Sua estrutura está muito boa, seguindo o padrão MVC e modularização:
+No seu `casosController.js`, a função `getAgenteByCasoId` está assim:
+
+```js
+async function getAgenteByCasoId(req, res) {
+    try {
+        const { id } = req.params;
+        const caso = await casosRepository.findById(id);
+        if (!caso) {
+            return errorHandler.sendNotFoundError(res, 'Caso não encontrado.');
+        }
+        const agente = await agentesRepository.findById(caso.agente_id);
+        if (!agente) {
+            return errorHandler.sendNotFoundError(res, 'Agente associado ao caso não foi encontrado.');
+        }
+        res.status(200).json(agente);
+    } catch (error) {
+        errorHandler.sendInternalServerError(res, error);
+    }
+}
+```
+
+A lógica está correta, mas o teste bônus falhou. Isso pode indicar que:
+
+- A rota `/casos/:id/agente` não está registrada no seu `casosRoutes.js`.  
+  **Confira se você tem:**
+
+  ```js
+  router.get('/casos/:id/agente', casosController.getAgenteByCasoId);
+  ```
+
+- Ou a rota está registrada, mas a requisição não está chegando ao controller (problema na ordem das rotas ou conflito de rotas).
+- Ou o ID do caso passado na requisição não está sendo tratado corretamente (verifique se o parâmetro `id` é convertido para número, se necessário).
+
+---
+
+### 5. Filtragem por data de incorporação e ordenação no endpoint `/agentes`
+
+No seu `agentesRepository.js`, você implementou ordenação por `dataDeIncorporacao`, mas não vi filtro direto por data, nem ordenação por outros campos além desse.
+
+O teste bônus que falhou indica que a filtragem e ordenação complexa por data não estão completamente implementadas. Seu código atual para ordenação é:
+
+```js
+if (filtros.sort) {
+    const sortField = filtros.sort.startsWith('-') ? filtros.sort.substring(1) : filtros.sort;
+    const sortOrder = filtros.sort.startsWith('-') ? 'desc' : 'asc';
+    
+    if (sortField === 'dataDeIncorporacao') {
+        query.orderBy(sortField, sortOrder);
+    }
+}
+```
+
+**Sugestão:**  
+Se quiser suportar filtros por intervalo de datas (ex: `dataDeIncorporacao_gte`, `dataDeIncorporacao_lte`), você precisa implementar essa lógica no repository. Por exemplo:
+
+```js
+if (filtros.dataDeIncorporacao_gte) {
+    query.where('dataDeIncorporacao', '>=', filtros.dataDeIncorporacao_gte);
+}
+if (filtros.dataDeIncorporacao_lte) {
+    query.where('dataDeIncorporacao', '<=', filtros.dataDeIncorporacao_lte);
+}
+```
+
+Isso vai permitir buscas mais refinadas.
+
+---
+
+### 6. Mensagens de erro customizadas para argumentos inválidos
+
+Embora você tenha implementado validações e retornos 400 com mensagens, percebi que as mensagens poderiam ser mais claras e padronizadas, especialmente para filtros inválidos (como status inválido em casos, ou filtros errados em agentes).
+
+Por exemplo, no seu `casosRepository.js`, você lança um erro customizado para status inválido:
+
+```js
+if (filtros.status && !STATUS_VALIDOS.includes(filtros.status.toLowerCase())) {
+    const error = new Error(`O status '${filtros.status}' é inválido.`);
+    error.name = 'ValidationError'; 
+    throw error;
+}
+```
+
+Isso é ótimo! Mas para agentes, não vi algo similar para filtros inválidos (ex: cargo inválido). Criar mensagens customizadas para todos filtros inválidos ajuda muito na usabilidade da API.
+
+---
+
+## ⚠️ Sobre a Estrutura do Projeto
+
+Sua estrutura está muito bem organizada e segue o padrão esperado:
 
 ```
-├── controllers/
-├── repositories/
-├── routes/
+📦 SEU-REPOSITÓRIO
+│
+├── package.json
+├── server.js
+├── knexfile.js
+├── INSTRUCTIONS.md
+│
 ├── db/
 │   ├── migrations/
 │   ├── seeds/
 │   └── db.js
-├── utils/
-└── server.js
+│
+├── routes/
+│   ├── agentesRoutes.js
+│   └── casosRoutes.js
+│
+├── controllers/
+│   ├── agentesController.js
+│   └── casosController.js
+│
+├── repositories/
+│   ├── agentesRepository.js
+│   └── casosRepository.js
+│
+└── utils/
+    └── errorHandler.js
 ```
 
-Isso é essencial para projetos escaláveis e manutenção facilitada. Parabéns por isso! 🎉
+Parabéns por manter essa organização! Isso facilita muito a manutenção e evolução do projeto.
 
 ---
 
-### 5. Configuração do Banco de Dados e Migrations
+## 📚 Recomendações de estudo para você brilhar ainda mais
 
-Você configurou o `knexfile.js` com as variáveis de ambiente e diretórios corretos para migrations e seeds, e o arquivo de migration `20250810133337_solution_migrations.js` está bem estruturado, com as tabelas `agentes` e `casos` e a chave estrangeira corretamente definida.
+- Para reforçar a conexão e configuração do banco com Docker e Knex, veja este vídeo super didático:  
+  [Configuração de Banco de Dados com Docker e Knex](http://googleusercontent.com/youtube.com/docker-postgresql-node)
 
-O seed também está populando os dados iniciais de forma correta, usando consultas para obter os `id`s dos agentes antes de inserir os casos, o que é uma boa prática.
+- Para entender melhor migrations e seeds, e garantir que suas tabelas e dados estão sempre corretos:  
+  [Knex Migrations](https://knexjs.org/guide/migrations.html)  
+  [Knex Seeds](http://googleusercontent.com/youtube.com/knex-seeds)
 
-**Só fique atento para:**
+- Para aprofundar na construção de queries complexas com Knex (como filtros, ordenações, joins):  
+  [Knex Query Builder](https://knexjs.org/guide/query-builder.html)
 
-- Sempre rodar o comando `npm run db:reset` para garantir que as migrations e seeds estejam atualizadas e o banco esteja no estado esperado.
+- Para aprimorar a validação e tratamento de erros HTTP na sua API:  
+  [Status 400 Bad Request](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400)  
+  [Status 404 Not Found](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404)  
+  [Validação de dados em APIs Node.js](https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_)
 
-- Verificar se as variáveis de ambiente para conexão com o banco (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`) estão corretas e carregadas no `.env`.
-
-Se a conexão com o banco estivesse errada, a maioria das funcionalidades não funcionaria, mas como várias delas estão passando, parece que essa parte está ok.
-
----
-
-### 6. Sobre os Testes que Falharam e Penalidades
-
-Os testes que falharam indicam problemas de validação, principalmente relacionados à alteração do `id` e controle de parâmetros inválidos. Isso reforça a importância de implementar validações mais rígidas nos endpoints de atualização.
-
-Além disso, a penalidade por permitir registrar casos com agentes inexistentes indica que, apesar de você ter uma verificação no controller para `agentesRepository.findById`, talvez ela não esteja funcionando corretamente ou não está bloqueando a criação.
+- Para entender melhor a arquitetura MVC e manter seu código organizado e escalável:  
+  [Arquitetura MVC em Node.js](https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH)
 
 ---
 
-## Recomendações de Aprendizado 📚
+## 📝 Resumo dos principais pontos para você focar agora
 
-Para consolidar seu conhecimento e corrigir esses pontos, recomendo fortemente os seguintes recursos:
-
-- **Validação de Dados e Tratamento de Erros na API:**  
-  https://youtu.be/yNDCRAz7CM8?si=Lh5u3j27j_a4w3A_  
-  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/400  
-  https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status/404  
-
-- **Knex.js Query Builder e Migrations:**  
-  https://knexjs.org/guide/query-builder.html  
-  https://knexjs.org/guide/migrations.html  
-
-- **Arquitetura MVC em Node.js para Organização de Código:**  
-  https://youtu.be/bGN_xNc4A1k?si=Nj38J_8RpgsdQ-QH  
-
-- **Configuração de Banco de Dados com Docker e Knex:**  
-  http://googleusercontent.com/youtube.com/docker-postgresql-node  
+- 🚫 **Impedir alteração do campo `id` no PATCH de agentes:** adicione validação explícita para bloquear isso.
+- ✅ **Garantir validação rigorosa do campo `agente_id` em casos:** verificar tipo e existência antes da criação e atualização.
+- 🔍 **Aprimorar o filtro por palavras-chave (`q`) nos casos:** garantir que o filtro funcione corretamente e seja exposto no endpoint.
+- 🕵️ **Verificar se a rota `/casos/:id/agente` está registrada e funcionando:** confirmar que o endpoint está acessível e retorna o agente correto.
+- 📅 **Implementar filtros por data de incorporação e ordenação mais flexível em agentes:** para atender a buscas mais complexas.
+- 💬 **Padronizar mensagens de erro customizadas para todos os filtros inválidos:** melhorar a clareza para quem consome sua API.
 
 ---
 
-## Resumo Rápido dos Principais Pontos para Focar 🔑
+Domynic, você está muito próximo de entregar uma API sólida e profissional! Continue focando nesses detalhes de validação e filtragem, que são essenciais para uma boa experiência do usuário e para garantir a integridade dos dados. Seu código já mostra uma base muito boa, e com esses ajustes, vai ficar ainda melhor. 🚀
 
-- 🚫 **Bloquear alteração do campo `id` nos endpoints PUT e PATCH** para agentes e casos.  
-- 🔍 **Garantir que os filtros e buscas avançadas estejam implementados e funcionando**, especialmente:  
-  - Busca por keywords (`q`) nos casos.  
-  - Ordenação e filtragem por data de incorporação nos agentes.  
-  - Endpoints para buscar agente pelo caso e casos pelo agente.  
-- 💬 **Padronizar e personalizar mensagens de erro para parâmetros inválidos** (status 400 e 404).  
-- ✅ **Verificar se o controle de existência do agente ao criar ou atualizar casos está funcionando corretamente** para evitar registros com agentes inexistentes.  
-- 📂 **Manter a excelente organização do projeto conforme o padrão MVC e modularização já adotado.**
+Conte comigo para o que precisar, e continue nessa jornada de aprendizado com muita curiosidade e paixão! 💪👨‍💻👩‍💻
 
----
-
-Domynic, você está muito próximo de uma API robusta e profissional! Continue focando na validação dos dados e no controle de integridade, pois são esses detalhes que fazem a diferença entre uma API funcional e uma API confiável e segura. 🚀
-
-Se precisar de ajuda para implementar alguma dessas validações ou entender melhor algum conceito, me chama que a gente resolve juntos! 👊
-
-Bons códigos e até a próxima! ✨
-
----
-
-*Code Buddy*
+Um grande abraço e até a próxima revisão! 🤗✨
 
 > Caso queira tirar uma dúvida específica, entre em contato com o Chapter no nosso [discord](https://discord.gg/DryuHVnz).
 
