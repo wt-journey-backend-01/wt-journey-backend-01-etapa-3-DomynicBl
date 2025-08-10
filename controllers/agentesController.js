@@ -1,7 +1,5 @@
 // agentesController.js
-
 const agentesRepository = require('../repositories/agentesRepository');
-const casosRepository = require('../repositories/casosRepository');
 const errorHandler = require('../utils/errorHandler');
 
 // Função auxiliar para validar os dados de um agente
@@ -31,8 +29,10 @@ function validarDadosAgente(dados) {
     return errors;
 }
 
+// CORRIGIDO: Passando todos os filtros para o repositório
 async function getAllAgentes(req, res) {
     try {
+        // Passa todos os query params para o repositório lidar com os filtros
         const agentes = await agentesRepository.findAll(req.query);
         res.status(200).json(agentes);
     } catch (error) {
@@ -40,9 +40,14 @@ async function getAllAgentes(req, res) {
     }
 }
 
+// CORRIGIDO: Validação do ID
 async function getAgenteById(req, res) {
     try {
-        const { id } = req.params;
+        const id = Number(req.params.id);
+        if (isNaN(id)) {
+            return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
+        }
+        
         const agente = await agentesRepository.findById(id);
         if (!agente) {
             return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
@@ -67,12 +72,18 @@ async function createAgente(req, res) {
     }
 }
 
+// CORRIGIDO: Validação do ID
 async function updateAgente(req, res) {
     try {
-        const { id } = req.params;
+        const id = Number(req.params.id);
+        if (isNaN(id)) {
+            return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
+        }
+
         if (!(await agentesRepository.findById(id))) {
             return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
         }
+        
         const errors = validarDadosAgente(req.body);
         if (Object.keys(errors).length > 0) {
             return errorHandler.sendInvalidParameterError(res, errors);
@@ -85,27 +96,28 @@ async function updateAgente(req, res) {
     }
 }
 
+// CORRIGIDO: Validação robusta para o PATCH
 async function patchAgente(req, res) {
     try {
-        const { id } = req.params;
+        const id = Number(req.params.id);
+        if (isNaN(id)) {
+            return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
+        }
+
         const dadosParciais = req.body;
 
         if (!(await agentesRepository.findById(id))) {
             return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
         }
-
+        
         if ('id' in dadosParciais) {
-            return errorHandler.sendInvalidParameterError(res, {
-                id: "O campo 'id' não pode ser alterado."
-            });
+            return errorHandler.sendInvalidParameterError(res, { id: "O campo 'id' não pode ser alterado." });
         }
 
-        // Validação do corpo vazio
         if (!dadosParciais || Object.keys(dadosParciais).length === 0) {
             return errorHandler.sendInvalidParameterError(res, { body: "Corpo da requisição para atualização parcial (PATCH) não pode estar vazio." });
         }
 
-        // Valida o formato da data, se ela for enviada
         if (dadosParciais.dataDeIncorporacao) {
             const dateFormat = /^\d{4}-\d{2}-\d{2}$/;
             if (!dateFormat.test(dadosParciais.dataDeIncorporacao)) {
@@ -122,16 +134,22 @@ async function patchAgente(req, res) {
     }
 }
 
+// CORRIGIDO: Validação do ID
 async function deleteAgente(req, res) {
     try {
-        const { id } = req.params;
+        const id = Number(req.params.id);
+        if (isNaN(id)) {
+            return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
+        }
+
         if (!(await agentesRepository.findById(id))) {
             return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
         }
+        
         await agentesRepository.remove(id);
         res.status(204).send();
     } catch (error) {
-        if (error.code === '23503') { // Código de erro do PostgreSQL para violação de FK
+        if (error.code === '23503') { 
             return errorHandler.sendInvalidParameterError(res, {
                 delecao: 'Não é possível excluir o agente pois ele está associado a casos existentes.'
             });
@@ -140,16 +158,22 @@ async function deleteAgente(req, res) {
     }
 }
 
+// CORRIGIDO: Validação do ID
 async function getCasosDoAgente(req, res) {
     try {
-      const { id } = req.params;
-      if (!(await agentesRepository.findById(id))) {
-        return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
-      }
-      const casos = await agentesRepository.findCasosByAgenteId(id);
-      res.status(200).json(casos);
+        const id = Number(req.params.id);
+        if (isNaN(id)) {
+            return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
+        }
+
+        if (!(await agentesRepository.findById(id))) {
+            return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
+        }
+        
+        const casos = await agentesRepository.findCasosByAgenteId(id);
+        res.status(200).json(casos);
     } catch (error) {
-      errorHandler.sendInternalServerError(res, error);
+        errorHandler.sendInternalServerError(res, error);
     }
 }
 

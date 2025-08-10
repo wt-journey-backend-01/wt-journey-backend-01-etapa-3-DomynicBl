@@ -34,7 +34,11 @@ async function getAllCasos(req, res) {
 
 async function getCasoById(req, res) {
     try {
-        const { id } = req.params;
+        const id = Number(req.params.id);
+        if (isNaN(id)) {
+            return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
+        }
+        
         const caso = await casosRepository.findById(id);
         if (!caso) {
             return errorHandler.sendNotFoundError(res, 'Caso não encontrado.');
