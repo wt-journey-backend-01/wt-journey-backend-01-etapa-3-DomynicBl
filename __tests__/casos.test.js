@@ -9,6 +9,11 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  // 1. Limpa a tabela 'casos' primeiro (por causa da chave estrangeira)
+  await db('casos').del();
+  // 2. Limpa a tabela 'agentes'
+  await db('agentes').del();
+  // 3. Agora, com o banco limpo, executa os seeds
   await db.seed.run();
 });
 

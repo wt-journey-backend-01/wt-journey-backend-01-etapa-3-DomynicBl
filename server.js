@@ -1,3 +1,4 @@
+// server.js
 const app = require('./app'); // Importa a configuração do app do novo arquivo
 
 const PORT = process.env.PORT || 3000;
