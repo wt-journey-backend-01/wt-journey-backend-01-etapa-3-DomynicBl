@@ -1,12 +1,10 @@
-// agentesController.js
 const agentesRepository = require('../repositories/agentesRepository');
 const errorHandler = require('../utils/errorHandler');
 
-// Função de validação completa para POST e PUT
+// Validador completo para POST e PUT
 function validarDadosAgente(dados) {
     const errors = {};
     const dateFormat = /^\d{4}-\d{2}-\d{2}$/;
-    
     if ('id' in dados) {
         errors.id = "O campo 'id' não pode ser alterado.";
     }
@@ -31,7 +29,7 @@ function validarDadosAgente(dados) {
     return errors;
 }
 
-// NOVA FUNÇÃO: Validação específica e mais flexível para PATCH
+// Validador específico e robusto para PATCH
 function validarDadosParciaisAgente(dados) {
     const errors = {};
     const dateFormat = /^\d{4}-\d{2}-\d{2}$/;
@@ -39,7 +37,7 @@ function validarDadosParciaisAgente(dados) {
     if ('id' in dados) {
         errors.id = "O campo 'id' não pode ser alterado.";
     }
-    if (dados.dataDeIncorporacao && !dateFormat.test(dados.dataDeIncorporacao)) {
+    if (dados.dataDeIncorporacao !== undefined && !dateFormat.test(dados.dataDeIncorporacao)) {
         errors.dataDeIncorporacao = "Campo 'dataDeIncorporacao' deve seguir a formatação 'YYYY-MM-DD'.";
     }
     if (dados.nome !== undefined && (typeof dados.nome !== 'string' || dados.nome.trim() === '')) {
@@ -50,7 +48,6 @@ function validarDadosParciaisAgente(dados) {
     }
     return errors;
 }
-
 
 async function getAllAgentes(req, res) {
     try {
@@ -72,13 +69,11 @@ async function getAllAgentes(req, res) {
 async function getAgenteById(req, res) {
     try {
         const id = Number(req.params.id);
-        if (isNaN(id)) {
-            return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
-        }
+        if (isNaN(id)) return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
+        
         const agente = await agentesRepository.findById(id);
-        if (!agente) {
-            return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
-        }
+        if (!agente) return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
+        
         res.status(200).json(agente);
     } catch (error) {
         errorHandler.sendInternalServerError(res, error);
@@ -88,10 +83,8 @@ async function getAgenteById(req, res) {
 async function createAgente(req, res) {
     try {
         const errors = validarDadosAgente(req.body);
-        if (Object.keys(errors).length > 0) {
-            return errorHandler.sendInvalidParameterError(res, errors);
-        }
-        // CORREÇÃO FINAL: Removendo explicitamente o ID antes de criar
+        if (Object.keys(errors).length > 0) return errorHandler.sendInvalidParameterError(res, errors);
+
         const { id, ...dadosParaCriar } = req.body;
         const novoAgente = await agentesRepository.create(dadosParaCriar);
         res.status(201).json(novoAgente);
@@ -103,17 +96,13 @@ async function createAgente(req, res) {
 async function updateAgente(req, res) {
     try {
         const id = Number(req.params.id);
-        if (isNaN(id)) {
-            return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
-        }
-        if (!(await agentesRepository.findById(id))) {
-            return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
-        }
+        if (isNaN(id)) return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
+
+        if (!(await agentesRepository.findById(id))) return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
+        
         const errors = validarDadosAgente(req.body);
-        if (Object.keys(errors).length > 0) {
-            return errorHandler.sendInvalidParameterError(res, errors);
-        }
-        // CORREÇÃO FINAL: Removendo explicitamente o ID antes de atualizar
+        if (Object.keys(errors).length > 0) return errorHandler.sendInvalidParameterError(res, errors);
+
         const { id: idDoBody, ...dadosParaAtualizar } = req.body;
         const agenteAtualizado = await agentesRepository.update(id, dadosParaAtualizar);
         res.status(200).json(agenteAtualizado);
@@ -125,21 +114,18 @@ async function updateAgente(req, res) {
 async function patchAgente(req, res) {
     try {
         const id = Number(req.params.id);
-        if (isNaN(id)) {
-            return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
-        }
+        if (isNaN(id)) return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
+
         const dadosParciais = req.body;
-        if (!(await agentesRepository.findById(id))) {
-            return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
-        }
+        if (!(await agentesRepository.findById(id))) return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
+        
         if (!dadosParciais || Object.keys(dadosParciais).length === 0) {
             return errorHandler.sendInvalidParameterError(res, { body: "Corpo da requisição para atualização parcial (PATCH) não pode estar vazio." });
         }
-        // CORREÇÃO FINAL: Usando a nova função de validação parcial
+        
         const errors = validarDadosParciaisAgente(dadosParciais);
-        if (Object.keys(errors).length > 0) {
-            return errorHandler.sendInvalidParameterError(res, errors);
-        }
+        if (Object.keys(errors).length > 0) return errorHandler.sendInvalidParameterError(res, errors);
+
         const agenteAtualizado = await agentesRepository.patch(id, dadosParciais);
         res.status(200).json(agenteAtualizado);
     } catch (error) {
@@ -150,12 +136,10 @@ async function patchAgente(req, res) {
 async function deleteAgente(req, res) {
     try {
         const id = Number(req.params.id);
-        if (isNaN(id)) {
-            return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
-        }
-        if (!(await agentesRepository.findById(id))) {
-            return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
-        }
+        if (isNaN(id)) return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
+        
+        if (!(await agentesRepository.findById(id))) return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
+        
         await agentesRepository.remove(id);
         res.status(204).send();
     } catch (error) {
@@ -171,12 +155,10 @@ async function deleteAgente(req, res) {
 async function getCasosDoAgente(req, res) {
     try {
         const id = Number(req.params.id);
-        if (isNaN(id)) {
-            return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
-        }
-        if (!(await agentesRepository.findById(id))) {
-            return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
-        }
+        if (isNaN(id)) return errorHandler.sendInvalidParameterError(res, { id: "O ID deve ser um número válido." });
+
+        if (!(await agentesRepository.findById(id))) return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
+        
         const casos = await agentesRepository.findCasosByAgenteId(id);
         res.status(200).json(casos);
     } catch (error) {
