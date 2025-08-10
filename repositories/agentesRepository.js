@@ -8,11 +8,10 @@ const db = require('../db/db');
  * @param {object} filtros - Objeto com os filtros (ex: { cargo: 'delegado', sort: '-dataDeIncorporacao' }).
  * @returns {Promise<Array>} Uma promessa que resolve para um array de agentes.
  */
-
 function findAll(filtros = {}) {
     // Define valores padrão para paginação
     const page = parseInt(filtros.page, 10) || 1;
-    const pageSize = parseInt(filtros.pageSize, 10) || 10; // Padrão de 10 itens por página
+    const pageSize = parseInt(filtros.pageSize, 10) || 10;
     const offset = (page - 1) * pageSize;
 
     let query = db('agentes').select('*');
@@ -21,6 +20,15 @@ function findAll(filtros = {}) {
     if (filtros.cargo) {
         query.where('cargo', 'ilike', `%${filtros.cargo}%`);
     }
+
+    // ADICIONADO: Filtros por intervalo de data de incorporação
+    if (filtros.dataDeIncorporacao_gte) { // gte = Greater Than or Equal
+        query.where('dataDeIncorporacao', '>=', filtros.dataDeIncorporacao_gte);
+    }
+    if (filtros.dataDeIncorporacao_lte) { // lte = Less Than or Equal
+        query.where('dataDeIncorporacao', '<=', filtros.dataDeIncorporacao_lte);
+    }
+    // FIM DA ADIÇÃO
 
     // Ordenação por dataDeIncorporacao
     if (filtros.sort) {

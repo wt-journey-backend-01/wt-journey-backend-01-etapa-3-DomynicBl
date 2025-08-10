@@ -94,6 +94,12 @@ async function patchAgente(req, res) {
             return errorHandler.sendNotFoundError(res, 'Agente não encontrado.');
         }
 
+        if ('id' in dadosParciais) {
+            return errorHandler.sendInvalidParameterError(res, {
+                id: "O campo 'id' não pode ser alterado."
+            });
+        }
+
         // Validação do corpo vazio
         if (!dadosParciais || Object.keys(dadosParciais).length === 0) {
             return errorHandler.sendInvalidParameterError(res, { body: "Corpo da requisição para atualização parcial (PATCH) não pode estar vazio." });

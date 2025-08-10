@@ -3,6 +3,7 @@ const casosRepository = require('../repositories/casosRepository');
 const agentesRepository = require('../repositories/agentesRepository');
 const errorHandler = require('../utils/errorHandler');
 
+// ALTERADO: Adicionada a validação que proíbe a alteração do campo 'id'
 function validarDadosCaso(dados) {
     const errors = {};
 
@@ -44,15 +45,23 @@ async function getCasoById(req, res) {
     }
 }
 
+// ALTERADO: Adicionada validação robusta para o agente_id
 async function createCaso(req, res) {
     try {
         const errors = validarDadosCaso(req.body);
         if (Object.keys(errors).length > 0) {
             return errorHandler.sendInvalidParameterError(res, errors);
         }
-        if (!(await agentesRepository.findById(req.body.agente_id))) {
-            return errorHandler.sendNotFoundError(res, `Agente com id '${req.body.agente_id}' não encontrado.`);
+
+        const agenteId = Number(req.body.agente_id);
+        if (isNaN(agenteId)) {
+            return errorHandler.sendInvalidParameterError(res, { agente_id: "O campo 'agente_id' deve ser um número válido." });
         }
+
+        if (!(await agentesRepository.findById(agenteId))) {
+            return errorHandler.sendNotFoundError(res, `Agente com id '${agenteId}' não encontrado.`);
+        }
+
         const novoCaso = await casosRepository.create(req.body);
         res.status(201).json(novoCaso);
     } catch (error) {
@@ -60,19 +69,28 @@ async function createCaso(req, res) {
     }
 }
 
+// ALTERADO: Adicionada validação robusta para o agente_id
 async function updateCaso(req, res) {
     try {
         const { id } = req.params;
         if (!(await casosRepository.findById(id))) {
             return errorHandler.sendNotFoundError(res, 'Caso não encontrado.');
         }
+
         const errors = validarDadosCaso(req.body);
         if (Object.keys(errors).length > 0) {
             return errorHandler.sendInvalidParameterError(res, errors);
         }
-        if (!(await agentesRepository.findById(req.body.agente_id))) {
-            return errorHandler.sendNotFoundError(res, `Agente com id '${req.body.agente_id}' não encontrado.`);
+
+        const agenteId = Number(req.body.agente_id);
+        if (isNaN(agenteId)) {
+            return errorHandler.sendInvalidParameterError(res, { agente_id: "O campo 'agente_id' deve ser um número válido." });
         }
+
+        if (!(await agentesRepository.findById(agenteId))) {
+            return errorHandler.sendNotFoundError(res, `Agente com id '${agenteId}' não encontrado.`);
+        }
+
         const casoAtualizado = await casosRepository.update(id, req.body);
         res.status(200).json(casoAtualizado);
     } catch (error) {
@@ -80,6 +98,7 @@ async function updateCaso(req, res) {
     }
 }
 
+// ALTERADO: Adicionada validação robusta para o agente_id (se ele for enviado)
 async function patchCaso(req, res) {
     try {
         const { id } = req.params;
@@ -89,8 +108,14 @@ async function patchCaso(req, res) {
             return errorHandler.sendNotFoundError(res, 'Caso não encontrado.');
         }
 
-        if (dadosParciais.agente_id && !(await agentesRepository.findById(dadosParciais.agente_id))) {
-            return errorHandler.sendNotFoundError(res, `Agente com id '${dadosParciais.agente_id}' não encontrado.`);
+        if (dadosParciais.agente_id) {
+            const agenteId = Number(dadosParciais.agente_id);
+            if (isNaN(agenteId)) {
+                return errorHandler.sendInvalidParameterError(res, { agente_id: "O campo 'agente_id' deve ser um número válido." });
+            }
+            if (!(await agentesRepository.findById(agenteId))) {
+                return errorHandler.sendNotFoundError(res, `Agente com id '${agenteId}' não encontrado.`);
+            }
         }
         
         if (dadosParciais.status && !['aberto', 'solucionado'].includes(dadosParciais.status)) {
@@ -98,6 +123,7 @@ async function patchCaso(req, res) {
                 status: "O campo 'status' pode ser somente 'aberto' ou 'solucionado'." 
             });
         }
+
         const casoAtualizado = await casosRepository.patch(id, req.body);
         res.status(200).json(casoAtualizado);
     } catch (error) {
@@ -132,7 +158,8 @@ async function getAgenteByCasoId(req, res) {
         res.status(200).json(agente);
     } catch (error) {
         errorHandler.sendInternalServerError(res, error);
-    }}
+    }
+}
 
 module.exports = {
     getAllCasos,
