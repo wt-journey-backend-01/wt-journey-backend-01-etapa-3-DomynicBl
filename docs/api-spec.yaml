@@ -1,0 +1,370 @@
+openapi: '3.0.0'
+info:
+  title: API do Departamento de Polícia
+  version: '1.0.0'
+  description: API RESTful para gerenciamento de casos e agentes da polícia, com persistência em PostgreSQL.
+servers:
+  - url: http://localhost:3000
+    description: Servidor de Desenvolvimento
+tags:
+  - name: Agentes
+    description: Operações para gerenciamento de agentes.
+  - name: Casos
+    description: Operações para gerenciamento de casos policiais.
+
+paths:
+  /agentes:
+    get:
+      tags: [Agentes]
+      summary: Lista todos os agentes com filtros e paginação
+      parameters:
+        - name: cargo
+          in: query
+          description: Filtra agentes por cargo (busca parcial, case-insensitive).
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: Ordena por data de incorporação ('dataDeIncorporacao' ou '-dataDeIncorporacao').
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Número da página para paginação.
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          description: Quantidade de itens por página.
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Uma lista de agentes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Agente'
+    post:
+      tags: [Agentes]
+      summary: Cria um novo agente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgenteInput'
+      responses:
+        '201':
+          description: Agente criado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agente'
+        '400':
+          description: Dados inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /agentes/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID do agente.
+        schema:
+          type: integer
+    get:
+      tags: [Agentes]
+      summary: Retorna um agente específico pelo ID
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agente'
+        '404':
+          description: Agente não encontrado.
+    put:
+      tags: [Agentes]
+      summary: Atualiza um agente por completo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgenteInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agente'
+    patch:
+      tags: [Agentes]
+      summary: Atualiza um agente parcialmente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgenteInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agente'
+    delete:
+      tags: [Agentes]
+      summary: Remove um agente
+      responses:
+        '204':
+          description: Agente removido com sucesso.
+        '400':
+          description: Não é possível remover agente com casos associados.
+
+  /agentes/{id}/casos:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID do agente para buscar os casos.
+        schema:
+          type: integer
+    get:
+      tags: [Agentes]
+      summary: Lista todos os casos de um agente específico
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Caso'
+        '404':
+          description: Agente não encontrado.
+
+  /casos:
+    get:
+      tags: [Casos]
+      summary: Lista todos os casos com filtros e paginação
+      parameters:
+        - name: status
+          in: query
+          description: Filtra casos por status ('aberto' ou 'solucionado').
+          schema:
+            type: string
+        - name: agente_id
+          in: query
+          description: Filtra casos por ID do agente responsável.
+          schema:
+            type: integer
+        - name: q
+          in: query
+          description: Busca por texto no título ou descrição do caso.
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Número da página.
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          description: Itens por página.
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Uma lista de casos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Caso'
+        '400':
+          description: Parâmetro de status inválido.
+    post:
+      tags: [Casos]
+      summary: Cria um novo caso
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CasoInput'
+      responses:
+        '201':
+          description: Caso criado com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Caso'
+
+  /casos/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID do caso.
+        schema:
+          type: integer
+    get:
+      tags: [Casos]
+      summary: Retorna um caso específico pelo ID
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Caso'
+    put:
+      tags: [Casos]
+      summary: Atualiza um caso por completo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CasoInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Caso'
+    patch:
+      tags: [Casos]
+      summary: Atualiza um caso parcialmente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CasoInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Caso'
+    delete:
+      tags: [Casos]
+      summary: Remove um caso
+      responses:
+        '204':
+          description: Caso removido com sucesso.
+
+  /casos/{id}/agente:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID do caso para buscar o agente responsável.
+        schema:
+          type: integer
+    get:
+      tags: [Casos]
+      summary: Retorna o agente responsável por um caso
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agente'
+        '404':
+          description: Caso ou agente não encontrado.
+
+components:
+  schemas:
+    Agente:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID único do agente.
+          example: 1
+        nome:
+          type: string
+          description: Nome completo do agente.
+          example: "Rommel Carneiro"
+        dataDeIncorporacao:
+          type: string
+          format: date
+          description: Data de entrada na corporação.
+          example: "1992-10-04"
+        cargo:
+          type: string
+          description: Cargo do agente.
+          example: "delegado"
+    AgenteInput:
+      type: object
+      properties:
+        nome:
+          type: string
+        dataDeIncorporacao:
+          type: string
+          format: date
+        cargo:
+          type: string
+    Caso:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        titulo:
+          type: string
+          example: "Homicídio no Bairro União"
+        descricao:
+          type: string
+          example: "Disparos foram reportados às 22:33..."
+        status:
+          type: string
+          enum: [aberto, solucionado]
+          example: "aberto"
+        agente_id:
+          type: integer
+          example: 1
+    CasoInput:
+      type: object
+      properties:
+        titulo:
+          type: string
+        descricao:
+          type: string
+        status:
+          type: string
+          enum: [aberto, solucionado]
+        agente_id:
+          type: integer
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "Parâmetros inválidos"
+        errors:
+          type: object

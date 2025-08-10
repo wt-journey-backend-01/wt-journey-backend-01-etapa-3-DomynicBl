@@ -1,0 +1,33 @@
+# Ficheiros de dependências e logs
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Ficheiros de ambiente (contêm segredos)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Ficheiros de build e de produção
+dist
+build
+.next
+.nuxt
+
+# Ficheiros de teste
+coverage
+/reports
+
+# Ficheiros de sistema operativo
+.DS_Store
+Thumbs.db
+
+# Ficheiros do editor
+.vscode/
+.idea/
+
+# Ficheiros de dados locais (Docker)
+postgres-data/
